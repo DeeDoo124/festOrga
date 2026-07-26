@@ -198,4 +198,15 @@ router.put('/:id', async (req, res) => {
   res.json(data);
 });
 
+// Lister les participants d'un événement — utile pour proposer une assignation
+router.get('/:id/participants', async (req, res) => {
+  const { data, error } = await req.supabase
+    .from('festorga_participants')
+    .select('user_id, display_name, role')
+    .eq('event_id', req.params.id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
 export default router;

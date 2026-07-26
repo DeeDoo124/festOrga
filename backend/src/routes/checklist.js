@@ -5,11 +5,13 @@ const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
 // Liste des items de la checklist (les RLS filtrent aux participants)
+// Non cochés d'abord, pour voir vite ce qu'il reste à faire
 router.get('/', async (req, res) => {
   const { data, error } = await req.supabase
     .from('festorga_checklist_items')
     .select('*')
     .eq('event_id', req.params.eventId)
+    .order('is_checked', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (error) return res.status(400).json({ error: error.message });
@@ -18,14 +20,19 @@ router.get('/', async (req, res) => {
 
 // Ajouter un item
 router.post('/', async (req, res) => {
-  const { label, comment } = req.body;
+  const { label, comment, assigned_to } = req.body;
   if (!label || !label.trim()) {
     return res.status(400).json({ error: 'Le libellé est requis' });
   }
 
   const { data, error } = await req.supabase
     .from('festorga_checklist_items')
-    .insert({ event_id: req.params.eventId, label: label.trim(), comment: comment?.trim() || null })
+    .insert({
+      event_id: req.params.eventId,
+      label: label.trim(),
+      comment: comment?.trim() || null,
+      assigned_to: assigned_to || null,
+    })
     .select()
     .single();
 
@@ -33,13 +40,14 @@ router.post('/', async (req, res) => {
   res.status(201).json(data);
 });
 
-// Cocher/décocher, modifier le libellé ou le commentaire — n'importe quel participant
+// Cocher/décocher, modifier le libellé, le commentaire ou l'assignation — n'importe quel participant
 router.patch('/:itemId', async (req, res) => {
-  const { label, comment, is_checked } = req.body;
+  const { label, comment, is_checked, assigned_to } = req.body;
 
   const updates = {};
   if (label !== undefined) updates.label = label.trim();
   if (comment !== undefined) updates.comment = comment?.trim() || null;
+  if (assigned_to !== undefined) updates.assigned_to = assigned_to || null;
   if (is_checked !== undefined) {
     updates.is_checked = is_checked;
     updates.checked_by = is_checked ? req.user.id : null;

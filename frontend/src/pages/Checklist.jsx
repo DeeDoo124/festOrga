@@ -7,20 +7,29 @@ export default function Checklist() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newLabel, setNewLabel] = useState('');
-  const [openCommentId, setOpenCommentId] = useState(null);
+  const [editingCommentId, setEditingCommentId] = useState(null);
 
-  const loadItems = () => {
+  const nameByUserId = Object.fromEntries(participants.map((p) => [p.user_id, p.display_name]));
+
+  const load = () => {
     setLoading(true);
-    apiFetch(`/api/events/${eventId}/checklist`)
-      .then(setItems)
+    Promise.all([
+      apiFetch(`/api/events/${eventId}/checklist`),
+      apiFetch(`/api/events/${eventId}/participants`),
+    ])
+      .then(([checklistItems, eventParticipants]) => {
+        setItems(checklistItems);
+        setParticipants(eventParticipants);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };
 
-  useEffect(loadItems, [eventId]);
+  useEffect(load, [eventId]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -28,7 +37,7 @@ export default function Checklist() {
     try {
       await apiFetch(`/api/events/${eventId}/checklist`, { method: 'POST', body: JSON.stringify({ label: newLabel }) });
       setNewLabel('');
-      loadItems();
+      load();
     } catch (err) {
       alert(err.message);
     }
@@ -40,7 +49,19 @@ export default function Checklist() {
         method: 'PATCH',
         body: JSON.stringify({ is_checked: !item.is_checked }),
       });
-      loadItems();
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleAssign = async (item, userId) => {
+    try {
+      await apiFetch(`/api/events/${eventId}/checklist/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ assigned_to: userId || null }),
+      });
+      load();
     } catch (err) {
       alert(err.message);
     }
@@ -52,8 +73,8 @@ export default function Checklist() {
         method: 'PATCH',
         body: JSON.stringify({ comment }),
       });
-      setOpenCommentId(null);
-      loadItems();
+      setEditingCommentId(null);
+      load();
     } catch (err) {
       alert(err.message);
     }
@@ -63,7 +84,7 @@ export default function Checklist() {
     if (!confirm('Supprimer cet élément ?')) return;
     try {
       await apiFetch(`/api/events/${eventId}/checklist/${id}`, { method: 'DELETE' });
-      loadItems();
+      load();
     } catch (err) {
       alert(err.message);
     }
@@ -97,7 +118,7 @@ export default function Checklist() {
               <span style={{ flex: 1, textDecoration: item.is_checked ? 'line-through' : 'none', opacity: item.is_checked ? 0.6 : 1 }}>
                 {item.label}
               </span>
-              <button onClick={() => setOpenCommentId(openCommentId === item.id ? null : item.id)} title="Commentaire">
+              <button onClick={() => setEditingCommentId(editingCommentId === item.id ? null : item.id)} title="Commentaire">
                 💬
               </button>
               <button onClick={() => handleDelete(item.id)} title="Supprimer">
@@ -105,11 +126,30 @@ export default function Checklist() {
               </button>
             </div>
 
-            {item.comment && openCommentId !== item.id && (
-              <div style={{ fontStyle: 'italic', marginTop: '0.4rem', color: 'var(--color-muted)' }}>{item.comment}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.4rem', fontSize: '0.85rem', color: 'var(--color-muted)' }}>
+              <select
+                value={item.assigned_to || ''}
+                onChange={(e) => handleAssign(item, e.target.value)}
+                style={{ minHeight: 'auto', padding: '0.25rem', fontSize: '0.85rem', width: 'auto' }}
+              >
+                <option value="">🙋 Non assigné</option>
+                {participants.map((p) => (
+                  <option key={p.user_id} value={p.user_id}>
+                    🙋 {p.display_name}
+                  </option>
+                ))}
+              </select>
+
+              {item.is_checked && item.checked_by && (
+                <span>✅ Coché par {nameByUserId[item.checked_by] || '?'}</span>
+              )}
+            </div>
+
+            {item.comment && editingCommentId !== item.id && (
+              <div style={{ fontStyle: 'italic', marginTop: '0.4rem', color: 'var(--color-muted)' }}>💬 {item.comment}</div>
             )}
 
-            {openCommentId === item.id && (
+            {editingCommentId === item.id && (
               <CommentEditor initialValue={item.comment || ''} onSave={(comment) => handleSaveComment(item, comment)} />
             )}
           </li>
