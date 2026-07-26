@@ -1,10 +1,20 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../middleware/auth.js';
 import { supabaseAdmin } from '../lib/supabaseClient.js';
 
 const router = Router();
 const MAX_PARTICIPANTS = 20;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans caractères ambigus (0/O, 1/I)
+
+// Limite les tentatives de code par IP, pour empêcher de deviner un code au hasard
+const joinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10,
+  message: { error: 'Trop de tentatives, réessaie dans quelques minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function generateCode(length = 6) {
   let code = '';
@@ -61,7 +71,7 @@ router.post('/', async (req, res) => {
 });
 
 // Rejoindre un événement via son code
-router.post('/join', async (req, res) => {
+router.post('/join', joinLimiter, async (req, res) => {
   const { code } = req.body;
   if (!code || !code.trim()) {
     return res.status(400).json({ error: 'Le code est requis' });
