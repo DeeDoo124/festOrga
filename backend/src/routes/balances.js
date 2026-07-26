@@ -1,42 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
+import { computeSettlements, computeBalances } from '../lib/settlement.js';
 
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
-
-function round2(n) {
-  return Math.round(n * 100) / 100;
-}
-
-// Fait correspondre à chaque étape le plus gros débiteur avec le plus gros
-// créditeur : minimise en pratique le nombre de transactions nécessaires.
-function computeSettlements(balances) {
-  const creditors = balances.filter((b) => b.balance > 0.01).map((b) => ({ ...b })).sort((a, b) => b.balance - a.balance);
-  const debtors = balances.filter((b) => b.balance < -0.01).map((b) => ({ ...b, balance: -b.balance })).sort((a, b) => b.balance - a.balance);
-
-  const transactions = [];
-  let i = 0;
-  let j = 0;
-
-  while (i < debtors.length && j < creditors.length) {
-    const amount = round2(Math.min(debtors[i].balance, creditors[j].balance));
-    transactions.push({
-      from: debtors[i].user_id,
-      fromName: debtors[i].display_name,
-      to: creditors[j].user_id,
-      toName: creditors[j].display_name,
-      amount,
-    });
-
-    debtors[i].balance = round2(debtors[i].balance - amount);
-    creditors[j].balance = round2(creditors[j].balance - amount);
-
-    if (debtors[i].balance < 0.01) i++;
-    if (creditors[j].balance < 0.01) j++;
-  }
-
-  return transactions;
-}
 
 router.get('/', async (req, res) => {
   const { eventId } = req.params;
@@ -57,25 +24,7 @@ router.get('/', async (req, res) => {
   const confirmedSettlements = settlements.filter((s) => s.status === 'confirmed');
   const pendingSettlements = settlements.filter((s) => s.status === 'pending');
 
-  const total = round2(expenses.reduce((sum, e) => sum + Number(e.amount), 0));
-  const share = participants.length ? round2(total / participants.length) : 0;
-
-  const balances = participants.map((p) => {
-    const paid = round2(expenses.filter((e) => e.author_id === p.user_id).reduce((sum, e) => sum + Number(e.amount), 0));
-    // Un remboursement confirmé rapproche les deux parties de l'équilibre :
-    // le débiteur doit moins, le créditeur reçoit moins.
-    const settled = confirmedSettlements.reduce((sum, s) => {
-      if (s.from_user_id === p.user_id) return sum + Number(s.amount);
-      if (s.to_user_id === p.user_id) return sum - Number(s.amount);
-      return sum;
-    }, 0);
-    return {
-      user_id: p.user_id,
-      display_name: p.display_name,
-      paid,
-      balance: round2(paid - share + settled),
-    };
-  });
+  const { total, share, balances } = computeBalances(participants, expenses, confirmedSettlements);
 
   const nameByUserId = Object.fromEntries(participants.map((p) => [p.user_id, p.display_name]));
   const pendingSettlementsWithNames = pendingSettlements.map((s) => ({
