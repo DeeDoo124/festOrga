@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { apiFetch, NetworkError } from '../lib/api';
 import { enqueueExpense } from '../lib/offlineQueue';
 
 const CATEGORIES = [
@@ -55,7 +55,7 @@ export default function ExpenseForm() {
     } catch (err) {
       // Pas de réseau (et pas une modification, plus rare et plus risquée à mettre en file) :
       // on enregistre localement au lieu de bloquer l'utilisateur.
-      const isNetworkError = err instanceof TypeError;
+      const isNetworkError = err instanceof NetworkError;
       if (isNetworkError && !isEditing) {
         const payload = { title, amount: Number(amount), category, expense_date: expenseDate, comment };
         enqueueExpense(eventId, payload);

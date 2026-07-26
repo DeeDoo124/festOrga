@@ -30,6 +30,27 @@ export default function Events() {
     }
   };
 
+  const handleLeave = async (id) => {
+    if (!confirm('Quitter cet événement ? Tes dépenses enregistrées seront aussi supprimées.')) return;
+    try {
+      await apiFetch(`/api/events/${id}/leave`, { method: 'DELETE' });
+      loadEvents();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleRename = async (event) => {
+    const newName = prompt('Nouveau nom :', event.name);
+    if (!newName || !newName.trim() || newName.trim() === event.name) return;
+    try {
+      await apiFetch(`/api/events/${event.id}`, { method: 'PUT', body: JSON.stringify({ name: newName.trim() }) });
+      loadEvents();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div>
       <h1>🎪 Mes événements</h1>
@@ -51,7 +72,13 @@ export default function Events() {
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
               <button onClick={() => navigate(`/events/${event.id}`)}>Ouvrir</button>
               {event.myRole === 'organizer' && (
-                <button onClick={() => handleDelete(event.id)}>🗑 Supprimer</button>
+                <>
+                  <button onClick={() => handleRename(event)}>✏️ Renommer</button>
+                  <button onClick={() => handleDelete(event.id)}>🗑 Supprimer</button>
+                </>
+              )}
+              {event.myRole !== 'organizer' && (
+                <button onClick={() => handleLeave(event.id)}>🚪 Quitter</button>
               )}
             </div>
           </li>

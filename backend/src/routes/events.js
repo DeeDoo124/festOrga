@@ -152,4 +152,50 @@ router.delete('/:id', async (req, res) => {
   res.status(204).send();
 });
 
+// Quitter un événement — la policy RLS interdit à l'organisateur de le faire
+// (il doit supprimer l'événement à la place). Ses propres dépenses sont
+// supprimées avec lui, pour ne pas laisser de dépenses orphelines.
+router.delete('/:id/leave', async (req, res) => {
+  const { error: expensesError } = await req.supabase
+    .from('festorga_expenses')
+    .delete()
+    .eq('event_id', req.params.id)
+    .eq('author_id', req.user.id);
+
+  if (expensesError) return res.status(400).json({ error: expensesError.message });
+
+  const { error, count } = await req.supabase
+    .from('festorga_participants')
+    .delete({ count: 'exact' })
+    .eq('event_id', req.params.id)
+    .eq('user_id', req.user.id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  if (count === 0) {
+    return res.status(403).json({ error: "L'organisateur ne peut pas quitter l'événement, seulement le supprimer" });
+  }
+
+  res.status(204).send();
+});
+
+// Renommer un événement — la policy RLS ne laisse passer que l'organisateur
+router.put('/:id', async (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Le nom est requis' });
+  }
+
+  const { data, error, count } = await req.supabase
+    .from('festorga_events')
+    .update({ name: name.trim() }, { count: 'exact' })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  if (count === 0) return res.status(403).json({ error: 'Renommage non autorisé' });
+
+  res.json(data);
+});
+
 export default router;
