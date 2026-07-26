@@ -128,9 +128,9 @@ export default function Balances() {
                 <div>{b.display_name}{b.user_id === user?.id && ' (toi)'}</div>
                 <div>A payé : {b.paid.toFixed(2)} €</div>
                 <div style={{ color: b.balance > 0 ? 'green' : b.balance < 0 ? 'red' : 'inherit' }}>
-                  {b.balance > 0 && `Doit recevoir ${b.balance.toFixed(2)} €`}
-                  {b.balance < 0 && `Doit payer ${Math.abs(b.balance).toFixed(2)} €`}
-                  {b.balance === 0 && 'Équilibré'}
+                  {b.balance > 0 && `▲ Doit recevoir ${b.balance.toFixed(2)} €`}
+                  {b.balance < 0 && `▼ Doit payer ${Math.abs(b.balance).toFixed(2)} €`}
+                  {b.balance === 0 && '● Équilibré'}
                 </div>
               </li>
             ))}
