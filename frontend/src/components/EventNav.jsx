@@ -8,6 +8,7 @@ export default function EventNav() {
     { to: `/events/${eventId}`, label: '💰 Dépenses' },
     { to: `/events/${eventId}/balances`, label: '⚖️ Soldes' },
     { to: `/events/${eventId}/checklist`, label: '✅ Checklist' },
+    { to: `/events/${eventId}/meeting-point`, label: '📍 RDV' },
   ];
 
   return (
