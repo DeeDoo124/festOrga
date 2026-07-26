@@ -90,8 +90,11 @@ export default function ExpenseForm() {
               style={{
                 padding: '0.75rem',
                 fontSize: '1rem',
-                border: category === c.value ? '2px solid black' : '1px solid #ccc',
+                border: category === c.value ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                 borderRadius: 8,
+                background: category === c.value ? 'var(--color-primary)' : 'var(--color-card-bg)',
+                color: category === c.value ? 'var(--color-primary-text)' : 'var(--color-text)',
+                fontWeight: category === c.value ? 700 : 400,
               }}
             >
               {c.label}
