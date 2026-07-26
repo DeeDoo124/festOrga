@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
+import EventNav from '../components/EventNav';
 
 export default function Balances() {
   const { eventId } = useParams();
@@ -67,6 +68,7 @@ export default function Balances() {
   return (
     <div>
       <button onClick={() => navigate(`/events/${eventId}`)}>← Dépenses</button>
+      <EventNav />
       <h1>⚖️ Soldes</h1>
 
       {loading && <p>Chargement...</p>}

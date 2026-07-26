@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import { flushQueue, getQueuedExpenses } from '../lib/offlineQueue';
+import EventNav from '../components/EventNav';
 
 const CATEGORY_ICONS = {
   nourriture: '🍔',
@@ -68,6 +69,7 @@ export default function ExpenseList() {
   return (
     <div>
       <button onClick={() => navigate('/')}>← Mes événements</button>
+      <EventNav />
       <h1>💰 Dépenses</h1>
 
       {!isOnline && (
@@ -116,8 +118,6 @@ export default function ExpenseList() {
       </ul>
 
       {!loading && expenses.length === 0 && pendingExpenses.length === 0 && <p>Aucune dépense pour l'instant.</p>}
-
-      <Link to={`/events/${eventId}/balances`}>Voir les soldes →</Link>
     </div>
   );
 }

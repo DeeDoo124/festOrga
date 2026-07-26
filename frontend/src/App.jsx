@@ -7,6 +7,7 @@ import JoinEvent from './pages/JoinEvent';
 import ExpenseList from './pages/ExpenseList';
 import ExpenseForm from './pages/ExpenseForm';
 import Balances from './pages/Balances';
+import Checklist from './pages/Checklist';
 
 // Redirige vers l'écran de connexion si l'utilisateur n'est pas authentifié
 function RequireAuth({ children }) {
@@ -30,6 +31,7 @@ function AppRoutes() {
       <Route path="/events/:eventId/expenses/new" element={<RequireAuth><ExpenseForm /></RequireAuth>} />
       <Route path="/events/:eventId/expenses/:expenseId/edit" element={<RequireAuth><ExpenseForm /></RequireAuth>} />
       <Route path="/events/:eventId/balances" element={<RequireAuth><Balances /></RequireAuth>} />
+      <Route path="/events/:eventId/checklist" element={<RequireAuth><Checklist /></RequireAuth>} />
     </Routes>
   );
 }

@@ -5,6 +5,7 @@ import eventsRouter from './routes/events.js';
 import expensesRouter from './routes/expenses.js';
 import balancesRouter from './routes/balances.js';
 import settlementsRouter from './routes/settlements.js';
+import checklistRouter from './routes/checklist.js';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/events', eventsRouter);
 app.use('/api/events/:eventId/expenses', expensesRouter);
 app.use('/api/events/:eventId/balances', balancesRouter);
 app.use('/api/events/:eventId/settlements', settlementsRouter);
+app.use('/api/events/:eventId/checklist', checklistRouter);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
