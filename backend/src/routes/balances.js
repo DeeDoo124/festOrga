@@ -41,33 +41,52 @@ function computeSettlements(balances) {
 router.get('/', async (req, res) => {
   const { eventId } = req.params;
 
-  const [participantsRes, expensesRes] = await Promise.all([
+  const [participantsRes, expensesRes, settlementsRes] = await Promise.all([
     req.supabase.from('festorga_participants').select('user_id, display_name').eq('event_id', eventId),
     req.supabase.from('festorga_expenses').select('author_id, amount').eq('event_id', eventId),
+    req.supabase.from('festorga_settlements').select('*').eq('event_id', eventId),
   ]);
 
   if (participantsRes.error) return res.status(400).json({ error: participantsRes.error.message });
   if (expensesRes.error) return res.status(400).json({ error: expensesRes.error.message });
+  if (settlementsRes.error) return res.status(400).json({ error: settlementsRes.error.message });
 
   const participants = participantsRes.data;
   const expenses = expensesRes.data;
+  const settlements = settlementsRes.data;
+  const confirmedSettlements = settlements.filter((s) => s.status === 'confirmed');
+  const pendingSettlements = settlements.filter((s) => s.status === 'pending');
 
   const total = round2(expenses.reduce((sum, e) => sum + Number(e.amount), 0));
   const share = participants.length ? round2(total / participants.length) : 0;
 
   const balances = participants.map((p) => {
     const paid = round2(expenses.filter((e) => e.author_id === p.user_id).reduce((sum, e) => sum + Number(e.amount), 0));
+    // Un remboursement confirmé rapproche les deux parties de l'équilibre :
+    // le débiteur doit moins, le créditeur reçoit moins.
+    const settled = confirmedSettlements.reduce((sum, s) => {
+      if (s.from_user_id === p.user_id) return sum + Number(s.amount);
+      if (s.to_user_id === p.user_id) return sum - Number(s.amount);
+      return sum;
+    }, 0);
     return {
       user_id: p.user_id,
       display_name: p.display_name,
       paid,
-      balance: round2(paid - share),
+      balance: round2(paid - share + settled),
     };
   });
 
+  const nameByUserId = Object.fromEntries(participants.map((p) => [p.user_id, p.display_name]));
+  const pendingSettlementsWithNames = pendingSettlements.map((s) => ({
+    ...s,
+    fromName: nameByUserId[s.from_user_id],
+    toName: nameByUserId[s.to_user_id],
+  }));
+
   const transactions = computeSettlements(balances);
 
-  res.json({ total, share, balances, transactions });
+  res.json({ total, share, balances, transactions, pendingSettlements: pendingSettlementsWithNames });
 });
 
 export default router;
