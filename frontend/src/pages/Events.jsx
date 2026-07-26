@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { apiFetch } from '../lib/api';
+import InstallPrompt from '../components/InstallPrompt';
 
 export default function Events() {
   const { user, signOut } = useAuth();
@@ -54,6 +55,7 @@ export default function Events() {
   return (
     <div>
       <h1>🎪 Mes événements</h1>
+      <InstallPrompt />
       <p>Connecté en tant que {user?.email}</p>
 
       <div style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0' }}>
