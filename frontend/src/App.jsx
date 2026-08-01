@@ -13,7 +13,7 @@ import MeetingPoint from './pages/MeetingPoint';
 // Redirige vers l'écran de connexion si l'utilisateur n'est pas authentifié
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return null; // ou un petit loader plus tard
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }

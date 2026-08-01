@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { apiFetch } from '../lib/api';
 import InstallPrompt from '../components/InstallPrompt';
+import ShareEventQr from '../components/ShareEventQr';
 
 export default function Events() {
   const { user, signOut } = useAuth();
@@ -71,6 +72,7 @@ export default function Events() {
           <li key={event.id} style={{ border: '1px solid #ccc', borderRadius: 8, padding: '1rem', marginBottom: '0.5rem' }}>
             <strong>{event.name}</strong> {event.myRole === 'organizer' && '👑'}
             <div>Code : {event.code}</div>
+            {event.myRole === 'organizer' && <ShareEventQr />}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
               <button onClick={() => navigate(`/events/${event.id}`)}>Ouvrir</button>
               {event.myRole === 'organizer' && (

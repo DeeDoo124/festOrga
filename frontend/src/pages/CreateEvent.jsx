@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import ShareEventQr from '../components/ShareEventQr';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -32,7 +33,8 @@ export default function CreateEvent() {
         <h1>✅ Événement créé</h1>
         <p>Partage ce code avec tes amis pour qu'ils rejoignent "{createdEvent.name}" :</p>
         <p style={{ fontSize: '2rem', fontWeight: 'bold', letterSpacing: '0.2em' }}>{createdEvent.code}</p>
-        <button onClick={() => navigate('/')}>Retour à mes événements</button>
+        <ShareEventQr />
+        <button onClick={() => navigate('/')} style={{ marginTop: '1rem' }}>Retour à mes événements</button>
       </div>
     );
   }
