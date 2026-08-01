@@ -12,6 +12,7 @@ export default function Checklist() {
   const [error, setError] = useState(null);
   const [newLabel, setNewLabel] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
+  const [openThreadId, setOpenThreadId] = useState(null);
 
   const nameByUserId = Object.fromEntries(participants.map((p) => [p.user_id, p.display_name]));
 
@@ -152,11 +153,92 @@ export default function Checklist() {
             {editingCommentId === item.id && (
               <CommentEditor initialValue={item.comment || ''} onSave={(comment) => handleSaveComment(item, comment)} />
             )}
+
+            <button
+              onClick={() => setOpenThreadId(openThreadId === item.id ? null : item.id)}
+              style={{ marginTop: '0.5rem', background: 'transparent', color: 'var(--color-muted)', border: 'none', minHeight: 'auto', padding: '0.25rem 0', fontWeight: 400, textDecoration: 'underline' }}
+            >
+              {openThreadId === item.id ? 'Fermer la discussion' : '💬 Discussion'}
+            </button>
+
+            {openThreadId === item.id && (
+              <CommentThread eventId={eventId} itemId={item.id} />
+            )}
           </li>
         ))}
       </ul>
 
       {!loading && items.length === 0 && <p>Rien dans la checklist pour l'instant.</p>}
+    </div>
+  );
+}
+
+function CommentThread({ eventId, itemId }) {
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState('');
+
+  const load = () => {
+    setLoading(true);
+    apiFetch(`/api/events/${eventId}/checklist/${itemId}/comments`)
+      .then(setComments)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(load, [eventId, itemId]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    try {
+      await apiFetch(`/api/events/${eventId}/checklist/${itemId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      });
+      setText('');
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await apiFetch(`/api/events/${eventId}/checklist/${itemId}/comments/${commentId}`, { method: 'DELETE' });
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '0.5rem', paddingLeft: '0.75rem', borderLeft: '2px solid var(--color-border)' }}>
+      {loading && <p style={{ fontSize: '0.85rem' }}>Chargement...</p>}
+
+      {comments.map((c) => (
+        <div key={c.id} style={{ fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+          <strong>{c.author_name}</strong> : {c.text}
+          <button
+            onClick={() => handleDeleteComment(c.id)}
+            style={{ marginLeft: '0.5rem', background: 'transparent', border: 'none', color: 'var(--color-muted)', minHeight: 'auto', padding: 0, fontSize: '0.8rem' }}
+          >
+            🗑
+          </button>
+        </div>
+      ))}
+
+      {!loading && comments.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>Aucun message pour l'instant.</p>}
+
+      <form onSubmit={handleSend} style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+        <input
+          type="text"
+          placeholder="Répondre..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          style={{ flex: 1, fontSize: '0.9rem' }}
+        />
+        <button type="submit" style={{ fontSize: '0.9rem' }}>Envoyer</button>
+      </form>
     </div>
   );
 }
