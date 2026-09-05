@@ -18,7 +18,6 @@ export default function Balances() {
     apiFetch(`/api/events/${eventId}/balances`)
       .then((d) => {
         setData(d);
-        // Pré-remplit chaque transaction avec le montant suggéré, modifiable ensuite
         const initialAmounts = {};
         d.transactions.forEach((t, i) => {
           initialAmounts[i] = t.amount;
@@ -160,6 +159,20 @@ export default function Balances() {
               </li>
             ))}
           </ul>
+
+          {data.confirmedSettlements.length > 0 && (
+            <>
+              <h2>🧾 Historique des remboursements</h2>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {data.confirmedSettlements.map((s) => (
+                  <li key={s.id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: '0.6rem 0.75rem', marginBottom: '0.4rem', fontSize: '0.9rem', color: 'var(--color-muted)' }}>
+                    <strong>{s.fromName}</strong> a remboursé <strong>{Number(s.amount).toFixed(2)} €</strong> à <strong>{s.toName}</strong>
+                    {s.confirmed_at && ` — ${new Date(s.confirmed_at).toLocaleDateString('fr-FR')}`}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </div>

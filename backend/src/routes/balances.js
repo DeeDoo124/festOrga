@@ -32,10 +32,20 @@ router.get('/', async (req, res) => {
     fromName: nameByUserId[s.from_user_id],
     toName: nameByUserId[s.to_user_id],
   }));
+  const confirmedSettlementsWithNames = confirmedSettlements
+    .map((s) => ({ ...s, fromName: nameByUserId[s.from_user_id], toName: nameByUserId[s.to_user_id] }))
+    .sort((a, b) => new Date(b.confirmed_at) - new Date(a.confirmed_at));
 
   const transactions = computeSettlements(balances);
 
-  res.json({ total, share, balances, transactions, pendingSettlements: pendingSettlementsWithNames });
+  res.json({
+    total,
+    share,
+    balances,
+    transactions,
+    pendingSettlements: pendingSettlementsWithNames,
+    confirmedSettlements: confirmedSettlementsWithNames,
+  });
 });
 
 export default router;
