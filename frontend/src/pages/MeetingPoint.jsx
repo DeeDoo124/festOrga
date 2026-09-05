@@ -12,6 +12,10 @@ export default function MeetingPoint() {
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -30,15 +34,37 @@ export default function MeetingPoint() {
     if (point) {
       setDescription(point.description);
       setMeetingTime(point.meeting_time || '');
+      setLatitude(point.latitude ?? null);
+      setLongitude(point.longitude ?? null);
     }
   }, [point]);
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("La géolocalisation n'est pas disponible sur cet appareil");
+      return;
+    }
+    setLocating(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLatitude(pos.coords.latitude);
+        setLongitude(pos.coords.longitude);
+        setLocating(false);
+      },
+      () => {
+        setLocationError('Impossible de récupérer ta position (autorisation refusée ?)');
+        setLocating(false);
+      },
+    );
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     try {
       await apiFetch(`/api/events/${eventId}/meeting-point`, {
         method: 'PUT',
-        body: JSON.stringify({ description, meeting_time: meetingTime }),
+        body: JSON.stringify({ description, meeting_time: meetingTime, latitude, longitude }),
       });
       setEditing(false);
       load();
@@ -54,11 +80,17 @@ export default function MeetingPoint() {
       setPoint(null);
       setDescription('');
       setMeetingTime('');
+      setLatitude(null);
+      setLongitude(null);
       setEditing(true);
     } catch (err) {
       alert(err.message);
     }
   };
+
+  const mapsUrl = point?.latitude && point?.longitude
+    ? `https://www.google.com/maps/dir/?api=1&destination=${point.latitude},${point.longitude}`
+    : null;
 
   return (
     <div>
@@ -73,6 +105,18 @@ export default function MeetingPoint() {
         <div style={{ border: '2px solid var(--color-primary)', borderRadius: 8, padding: '1rem', margin: '1rem 0' }}>
           <div style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>{point.description}</div>
           {point.meeting_time && <div style={{ fontSize: '1.1rem', marginTop: '0.25rem' }}>🕒 {point.meeting_time}</div>}
+
+          {mapsUrl && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+              <button style={{ width: '100%', marginTop: '0.75rem' }}>🗺️ M'y guider</button>
+            </a>
+          )}
+          {!mapsUrl && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}>
+              Pas de position GPS enregistrée — modifie le point pour en ajouter une.
+            </p>
+          )}
+
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
             <button onClick={() => setEditing(true)}>✏️ Modifier</button>
             <button onClick={handleClear}>🗑 Effacer</button>
@@ -95,6 +139,16 @@ export default function MeetingPoint() {
             value={meetingTime}
             onChange={(e) => setMeetingTime(e.target.value)}
           />
+
+          <button type="button" onClick={handleUseMyLocation} disabled={locating}>
+            {locating ? '📍 Localisation...' : '📍 Utiliser ma position actuelle'}
+          </button>
+
+          {latitude && longitude && (
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)' }}>✅ Position capturée</p>
+          )}
+          {locationError && <p style={{ color: 'red', fontSize: '0.9rem' }}>{locationError}</p>}
+
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit">Enregistrer</button>
             {point && <button type="button" onClick={() => setEditing(false)}>Annuler</button>}
