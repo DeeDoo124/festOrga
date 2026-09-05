@@ -4,18 +4,42 @@ import { requireAuth } from '../middleware/auth.js';
 const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
-// Liste des items de la checklist (les RLS filtrent aux participants)
-// Non cochés d'abord, pour voir vite ce qu'il reste à faire
+// Liste des items, avec le nombre de messages et un indicateur "non lu" par item
 router.get('/', async (req, res) => {
-  const { data, error } = await req.supabase
+  const { eventId } = req.params;
+
+  const { data: items, error } = await req.supabase
     .from('festorga_checklist_items')
     .select('*')
-    .eq('event_id', req.params.eventId)
+    .eq('event_id', eventId)
     .order('is_checked', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+
+  const itemIds = items.map((i) => i.id);
+
+  const [commentsRes, readsRes] = await Promise.all([
+    req.supabase.from('festorga_checklist_comments').select('item_id, created_at').eq('event_id', eventId),
+    itemIds.length
+      ? req.supabase.from('festorga_checklist_reads').select('item_id, last_read_at').eq('user_id', req.user.id).in('item_id', itemIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const comments = commentsRes.data || [];
+  const reads = readsRes.data || [];
+  const lastReadByItem = Object.fromEntries(reads.map((r) => [r.item_id, r.last_read_at]));
+
+  const enrichedItems = items.map((item) => {
+    const itemComments = comments.filter((c) => c.item_id === item.id);
+    const commentCount = itemComments.length;
+    const lastCommentAt = itemComments.reduce((max, c) => (c.created_at > max ? c.created_at : max), null);
+    const lastReadAt = lastReadByItem[item.id];
+    const hasUnread = commentCount > 0 && (!lastReadAt || lastCommentAt > lastReadAt);
+    return { ...item, commentCount, hasUnread };
+  });
+
+  res.json(enrichedItems);
 });
 
 // Ajouter un item

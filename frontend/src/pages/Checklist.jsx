@@ -91,6 +91,19 @@ export default function Checklist() {
     }
   };
 
+  const handleToggleThread = async (item) => {
+    const opening = openThreadId !== item.id;
+    setOpenThreadId(opening ? item.id : null);
+    if (opening && item.hasUnread) {
+      try {
+        await apiFetch(`/api/events/${eventId}/checklist/${item.id}/comments/read`, { method: 'PUT' });
+        load();
+      } catch {
+        // pas bloquant si le marquage "lu" échoue
+      }
+    }
+  };
+
   return (
     <div>
       <button onClick={() => navigate('/')}>← Mes événements</button>
@@ -116,7 +129,14 @@ export default function Checklist() {
           <li key={item.id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: '0.75rem', marginBottom: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input type="checkbox" checked={item.is_checked} onChange={() => handleToggle(item)} style={{ minHeight: 'auto', width: '22px', height: '22px' }} />
-              <span style={{ flex: 1, textDecoration: item.is_checked ? 'line-through' : 'none', opacity: item.is_checked ? 0.6 : 1 }}>
+              <span
+                style={{
+                  flex: 1,
+                  textDecoration: item.is_checked ? 'line-through' : 'none',
+                  opacity: item.is_checked ? 0.6 : 1,
+                  fontWeight: item.hasUnread ? 700 : 400,
+                }}
+              >
                 {item.label}
               </span>
               <button onClick={() => setEditingCommentId(editingCommentId === item.id ? null : item.id)} title="Commentaire">
@@ -155,14 +175,24 @@ export default function Checklist() {
             )}
 
             <button
-              onClick={() => setOpenThreadId(openThreadId === item.id ? null : item.id)}
-              style={{ marginTop: '0.5rem', background: 'transparent', color: 'var(--color-muted)', border: 'none', minHeight: 'auto', padding: '0.25rem 0', fontWeight: 400, textDecoration: 'underline' }}
+              onClick={() => handleToggleThread(item)}
+              style={{
+                marginTop: '0.5rem',
+                background: 'transparent',
+                color: item.hasUnread ? 'var(--color-primary)' : 'var(--color-muted)',
+                border: 'none',
+                minHeight: 'auto',
+                padding: '0.25rem 0',
+                fontWeight: item.hasUnread ? 700 : 400,
+                textDecoration: 'underline',
+              }}
             >
-              {openThreadId === item.id ? 'Fermer la discussion' : '💬 Discussion'}
+              {openThreadId === item.id ? 'Fermer la discussion' : `💬 Discussion${item.commentCount ? ` (${item.commentCount})` : ''}`}
+              {item.hasUnread && ' 🔴'}
             </button>
 
             {openThreadId === item.id && (
-              <CommentThread eventId={eventId} itemId={item.id} />
+              <CommentThread eventId={eventId} itemId={item.id} onSent={load} />
             )}
           </li>
         ))}
@@ -173,7 +203,17 @@ export default function Checklist() {
   );
 }
 
-function CommentThread({ eventId, itemId }) {
+function CommentEditor({ initialValue, onSave }) {
+  const [value, setValue] = useState(initialValue);
+  return (
+    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+      <input type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Commentaire..." style={{ flex: 1 }} />
+      <button onClick={() => onSave(value)}>OK</button>
+    </div>
+  );
+}
+
+function CommentThread({ eventId, itemId, onSent }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -197,6 +237,7 @@ function CommentThread({ eventId, itemId }) {
       });
       setText('');
       load();
+      onSent?.();
     } catch (err) {
       alert(err.message);
     }
@@ -206,6 +247,7 @@ function CommentThread({ eventId, itemId }) {
     try {
       await apiFetch(`/api/events/${eventId}/checklist/${itemId}/comments/${commentId}`, { method: 'DELETE' });
       load();
+      onSent?.();
     } catch (err) {
       alert(err.message);
     }
@@ -239,16 +281,6 @@ function CommentThread({ eventId, itemId }) {
         />
         <button type="submit" style={{ fontSize: '0.9rem' }}>Envoyer</button>
       </form>
-    </div>
-  );
-}
-
-function CommentEditor({ initialValue, onSave }) {
-  const [value, setValue] = useState(initialValue);
-  return (
-    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-      <input type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Commentaire..." style={{ flex: 1 }} />
-      <button onClick={() => onSave(value)}>OK</button>
     </div>
   );
 }

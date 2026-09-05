@@ -41,6 +41,19 @@ router.post('/', async (req, res) => {
   res.status(201).json(data);
 });
 
+// Marquer la discussion de cet item comme lue par l'utilisateur courant
+router.put('/read', async (req, res) => {
+  const { error } = await req.supabase
+    .from('festorga_checklist_reads')
+    .upsert(
+      { item_id: req.params.itemId, user_id: req.user.id, last_read_at: new Date().toISOString() },
+      { onConflict: 'item_id,user_id' },
+    );
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(204).send();
+});
+
 // Supprimer son propre commentaire — la policy RLS ne laisse passer que l'auteur
 router.delete('/:commentId', async (req, res) => {
   const { error, count } = await req.supabase
