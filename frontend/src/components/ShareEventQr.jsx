@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-export default function ShareEventQr() {
+export default function ShareEventQr({ code }) {
   const [open, setOpen] = useState(false);
-  const appUrl = window.location.origin;
+  const qrUrl = code
+    ? `${window.location.origin}/join?code=${encodeURIComponent(code)}`
+    : window.location.origin;
 
   return (
     <div>
@@ -26,10 +28,11 @@ export default function ShareEventQr() {
             textAlign: 'center',
           }}
         >
-          <QRCodeSVG value={appUrl} size={180} fgColor="#2A2440" bgColor="#FFF8F0" />
-          <p style={{ color: '#2A2440', fontSize: '0.85rem', wordBreak: 'break-all', marginTop: '0.75rem' }}>{appUrl}</p>
+          <QRCodeSVG value={qrUrl} size={180} fgColor="#2A2440" bgColor="#FFF8F0" />
+          <p style={{ color: '#2A2440', fontSize: '0.85rem', wordBreak: 'break-all', marginTop: '0.75rem' }}>{qrUrl}</p>
         </div>
       )}
     </div>
   );
 }
+

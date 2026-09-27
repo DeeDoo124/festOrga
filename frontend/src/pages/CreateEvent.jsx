@@ -33,7 +33,7 @@ export default function CreateEvent() {
         <h1>✅ Événement créé</h1>
         <p>Partage ce code avec tes amis pour qu'ils rejoignent "{createdEvent.name}" :</p>
         <p style={{ fontSize: '2rem', fontWeight: 'bold', letterSpacing: '0.2em' }}>{createdEvent.code}</p>
-        <ShareEventQr />
+        <ShareEventQr code={createdEvent.code} />
         <button onClick={() => navigate('/')} style={{ marginTop: '1rem' }}>Retour à mes événements</button>
       </div>
     );
